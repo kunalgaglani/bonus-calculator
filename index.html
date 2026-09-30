@@ -329,10 +329,9 @@
     const REFRESH_MS = 5 * 60 * 1000;
     let fetchedAt = 0;
     let fetchedKey = "";
-    let refetchTimer;
 
     document.querySelector("#settings").addEventListener("submit", (event) => event.preventDefault());
-    fields.lockDate.addEventListener("change", () => scheduleRefetch());
+    fields.lockDate.addEventListener("change", () => render());
     fields.lockPrice.addEventListener("input", () => render());
     fields.upliftPercent.addEventListener("input", () => render());
     fields.cashPercent.addEventListener("input", () => render());
@@ -382,12 +381,6 @@
       return "";
     }
 
-    function scheduleRefetch() {
-      writeSubtitle(currentSettings());
-      clearTimeout(refetchTimer);
-      refetchTimer = setTimeout(loadPrices, 400);
-    }
-
     async function loadPrices() {
       const settings = currentSettings();
       const problem = settingsError(settings);
@@ -424,6 +417,12 @@
       const price = latestPrice();
       if (!prices || price == null || settingsError(settings)) return;
 
+      const points = prices.points.filter((point) => point.date >= settings.lockDate);
+      if (!points.length) {
+        showError("No prices on or after the start date.");
+        return;
+      }
+
       const sinceLock = (price / settings.lockPrice - 1) * 100;
       const stockNow = stockIndex(price, settings);
       const versusCash = (stockNow / settings.cashPercent - 1) * 100;
@@ -442,8 +441,8 @@
         `100 is the starting amount. A ${formatPlain(settings.upliftPercent)}% uplift begins at ${formatPlain(100 + settings.upliftPercent)}. Cash stays at ${formatPlain(settings.cashPercent)}%.`;
 
       drawChart(
-        prices.points.map((point) => formatDay(point.date)),
-        prices.points.map((point) => stockIndex(point.close, settings)),
+        points.map((point) => formatDay(point.date)),
+        points.map((point) => stockIndex(point.close, settings)),
         settings.cashPercent,
       );
       renderBonus(settings, price);

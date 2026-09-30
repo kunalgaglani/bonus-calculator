@@ -1,0 +1,6 @@
+server.py
+worker.js
+wrangler.toml
+.assetsignore
+.git
+.DS_Store

@@ -1,0 +1,619 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Bonus Calculator</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.6/dist/chart.umd.min.js"></script>
+  <style>
+    :root {
+      color-scheme: dark;
+      --bg: #0b1220;
+      --card: #151d2e;
+      --ink: #e8eef7;
+      --muted: #94a3b8;
+      --line: #2a3850;
+      --accent: #60a5fa;
+      --positive: #34d399;
+      --negative: #f87171;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      background:
+        radial-gradient(900px 420px at 8% -10%, rgba(37, 99, 235, 0.28), transparent 60%),
+        radial-gradient(720px 380px at 100% 0%, rgba(13, 148, 136, 0.2), transparent 55%),
+        #0b1220;
+      color: var(--ink);
+      font: 16px/1.5 ui-sans-serif, system-ui, sans-serif;
+    }
+
+    main {
+      max-width: 920px;
+      margin: 0 auto;
+      padding: 28px 20px 64px;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    .intro h1 {
+      margin: 0;
+      font-size: 1.75rem;
+      font-weight: 650;
+      letter-spacing: -0.03em;
+    }
+
+    .intro h1::after {
+      content: "";
+      display: block;
+      width: 76px;
+      height: 4px;
+      margin-top: 10px;
+      border-radius: 99px;
+      background: linear-gradient(90deg, #2563eb, #14b8a6);
+    }
+
+    .intro p {
+      margin: 6px 0 0;
+      color: var(--muted);
+    }
+
+    .note, .caption {
+      margin: 6px 0 0;
+      color: var(--muted);
+      font-size: 0.92rem;
+    }
+
+    .error {
+      margin: 0;
+      padding: 12px 14px;
+      border-radius: 8px;
+      background: #3f1d24;
+      color: #fecaca;
+    }
+
+    .stats {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+      margin: 0;
+    }
+
+    article, .panel {
+      background: var(--card);
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      box-shadow: 0 1px 2px rgba(0, 0, 0, 0.35);
+      padding: 18px 20px;
+      transition: transform 180ms ease, box-shadow 180ms ease;
+    }
+
+    .settings-panel h2 { color: #60a5fa; }
+    .metric-start h2 { color: #60a5fa; }
+    .metric-cash h2 { color: #2dd4bf; }
+    .chart-panel h2 { color: #a5b4fc; }
+    .bonus-panel h2 { color: #c4b5fd; }
+
+    article:hover, .panel:hover {
+      transform: translateY(-3px);
+      box-shadow: 0 16px 36px rgba(37, 99, 235, 0.22);
+    }
+
+    .metric-cash:hover { box-shadow: 0 16px 36px rgba(45, 212, 191, 0.18); }
+    .chart-panel:hover { box-shadow: 0 16px 36px rgba(165, 180, 252, 0.18); }
+    .bonus-panel:hover { box-shadow: 0 16px 36px rgba(196, 181, 253, 0.18); }
+
+    article h2, .panel h2 {
+      margin: 0;
+      font-size: 0.75rem;
+      font-weight: 650;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+      color: var(--muted);
+    }
+
+    .stat {
+      margin: 8px 0 0;
+      font-size: 2.15rem;
+      font-weight: 650;
+      letter-spacing: -0.04em;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .positive { color: var(--positive); }
+    .negative { color: var(--negative); }
+
+    .detail { margin: 4px 0 0; color: var(--muted); }
+
+    .chart-wrap { margin-top: 12px; height: 340px; }
+
+    .caption { margin-top: 10px; }
+
+    label {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      font-size: 0.82rem;
+      font-weight: 600;
+      color: var(--muted);
+    }
+
+    input {
+      width: 100%;
+      padding: 10px 12px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: #0f172a;
+      color: var(--ink);
+      font: 16px/1.4 ui-sans-serif, system-ui, sans-serif;
+      font-weight: 500;
+      transition: border-color 160ms ease, box-shadow 160ms ease, background 160ms ease;
+    }
+
+    input:hover {
+      border-color: #60a5fa;
+      background: #121c31;
+    }
+
+    input:focus {
+      outline: none;
+      border-color: var(--accent);
+      background: #0f172a;
+      box-shadow: 0 0 0 4px rgba(96, 165, 250, 0.22);
+    }
+
+    .bonus-input { max-width: 240px; margin-top: 14px; }
+
+    dl {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 14px 18px;
+      margin: 16px 0 0;
+    }
+
+    dl[hidden] { display: none; }
+
+    dt { color: var(--muted); font-size: 0.85rem; }
+    dd {
+      margin: 2px 0 0;
+      font-size: 1.35rem;
+      font-weight: 650;
+      letter-spacing: -0.03em;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .settings {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 12px;
+      margin-top: 14px;
+    }
+
+    dl > div {
+      padding: 12px 14px;
+      border-radius: 10px;
+      background: #0f172a;
+      transition: background 160ms ease, box-shadow 160ms ease, transform 160ms ease;
+    }
+
+    dl > div:hover {
+      background: #172033;
+      transform: translateY(-2px);
+      box-shadow: 0 8px 18px rgba(37, 99, 235, 0.22);
+    }
+
+    dl > div:nth-child(2),
+    dl > div:nth-child(4) { background: #10211f; }
+
+    dl > div:nth-child(2):hover,
+    dl > div:nth-child(4):hover {
+      background: #14302c;
+      box-shadow: 0 8px 18px rgba(45, 212, 191, 0.16);
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      article, .panel, input, dl > div {
+        transition: none;
+      }
+
+      article:hover, .panel:hover, dl > div:hover {
+        transform: none;
+      }
+    }
+    @media (max-width: 720px) {
+      .stats, dl, .settings { grid-template-columns: 1fr 1fr; }
+    }
+
+    @media (max-width: 520px) {
+      .stats, dl, .settings { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <main>
+    <section class="panel intro">
+      <h1>Bonus Calculator</h1>
+      <p id="subtitle">AXON from $424.75 on Sep 28, 2026</p>
+      <p id="asof">Loading the saved price.</p>
+      <p class="note">This price refreshes every 5 minutes.</p>
+    </section>
+    <p id="error" class="error" hidden></p>
+
+    <section class="panel settings-panel">
+      <h2>Settings</h2>
+      <p class="note">Change any field. The page uses these values. Refresh restores the defaults.</p>
+      <form id="settings" class="settings" autocomplete="off">
+        <label>Start price <input id="lock-price" name="lockPrice" type="number" min="0" step="0.01" value="424.75" required></label>
+        <label>Start date <input id="lock-date" name="lockDate" type="date" value="2026-09-28" required></label>
+        <label>Uplift % <input id="uplift" name="upliftPercent" type="number" min="0" step="0.1" value="5" required></label>
+        <label>Cash % <input id="cash" name="cashPercent" type="number" min="0" step="0.1" value="85" required></label>
+      </form>
+    </section>
+
+    <section class="stats">
+      <article class="metric-start">
+        <h2>Since start</h2>
+        <p id="since-lock" class="stat" aria-live="polite">—</p>
+        <p id="price-detail" class="detail"></p>
+      </article>
+      <article class="metric-cash">
+        <h2>Versus cash</h2>
+        <p id="versus-cash" class="stat" aria-live="polite">—</p>
+        <p id="cash-detail" class="detail"></p>
+      </article>
+    </section>
+
+    <section class="panel chart-panel">
+      <h2>Value</h2>
+      <div class="chart-wrap">
+        <canvas id="chart"></canvas>
+      </div>
+      <p id="caption" class="caption"></p>
+    </section>
+
+    <section class="panel bonus-panel">
+      <h2>Bonus amount</h2>
+      <p class="note">Calculated in this tab only. Not saved.</p>
+      <label class="bonus-input">
+        Bonus amount
+        <input id="bonus" type="text" inputmode="decimal" autocomplete="off" spellcheck="false" placeholder="0">
+      </label>
+      <p id="bonus-error" class="detail" hidden>Enter a bonus amount of zero or more.</p>
+      <dl id="bonus-results" hidden>
+        <div>
+          <dt>Invested</dt>
+          <dd id="invested"></dd>
+        </div>
+        <div>
+          <dt>Shares</dt>
+          <dd id="shares"></dd>
+        </div>
+        <div>
+          <dt>Worth now</dt>
+          <dd id="worth"></dd>
+        </div>
+        <div>
+          <dt>Cash alternative</dt>
+          <dd id="cash-dollars"></dd>
+        </div>
+      </dl>
+    </section>
+  </main>
+
+  <script>
+    const SETTINGS_KEY = "bonus2026-settings";
+    const money = new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" });
+    const percent = new Intl.NumberFormat("en-US", {
+      signDisplay: "exceptZero",
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    });
+    const sharesFormat = new Intl.NumberFormat("en-US", {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 4,
+    });
+
+    const TICKER = "AXON";
+    const fields = {
+      lockPrice: document.querySelector("#lock-price"),
+      lockDate: document.querySelector("#lock-date"),
+      upliftPercent: document.querySelector("#uplift"),
+      cashPercent: document.querySelector("#cash"),
+    };
+    const bonusInput = document.querySelector("#bonus");
+    let chart;
+    let prices = null;
+    const REFRESH_MS = 5 * 60 * 1000;
+    let fetchedAt = 0;
+    let fetchedKey = "";
+    let refetchTimer;
+
+    document.querySelector("#settings").addEventListener("submit", (event) => event.preventDefault());
+    fields.lockDate.addEventListener("change", () => scheduleRefetch());
+    fields.lockPrice.addEventListener("input", () => render());
+    fields.upliftPercent.addEventListener("input", () => render());
+    fields.cashPercent.addEventListener("input", () => render());
+    bonusInput.addEventListener("input", () => renderBonus(currentSettings(), latestPrice()));
+
+    async function start() {
+      localStorage.removeItem(SETTINGS_KEY);
+      try {
+        const response = await fetch("/config.json");
+        if (response.ok) applySettings(await response.json());
+      } catch (_error) {
+        // The form already holds the same defaults as config.json.
+      }
+      writeSubtitle(currentSettings());
+      await loadPrices();
+    }
+
+    function writeSubtitle(settings) {
+      if (settingsError(settings)) return;
+      document.querySelector("#subtitle").textContent =
+        `${TICKER} from ${money.format(settings.lockPrice)} on ${formatDay(settings.lockDate, true)}`;
+    }
+
+    function applySettings(values) {
+      if (!values) return;
+      if (isPositive(values.lockPrice)) fields.lockPrice.value = String(values.lockPrice);
+      if (isDate(values.lockDate)) fields.lockDate.value = values.lockDate;
+      if (isZeroOrMore(values.upliftPercent)) fields.upliftPercent.value = String(values.upliftPercent);
+      if (isPositive(values.cashPercent)) fields.cashPercent.value = String(values.cashPercent);
+    }
+
+    function currentSettings() {
+      return {
+        ticker: TICKER,
+        lockPrice: Number(fields.lockPrice.value),
+        lockDate: fields.lockDate.value,
+        upliftPercent: Number(fields.upliftPercent.value),
+        cashPercent: Number(fields.cashPercent.value),
+      };
+    }
+
+    function settingsError(settings) {
+      if (!isPositive(settings.lockPrice)) return "Enter a start price above zero.";
+      if (!isDate(settings.lockDate)) return "Enter a start date.";
+      if (!isZeroOrMore(settings.upliftPercent)) return "Enter an uplift of zero or more.";
+      if (!isPositive(settings.cashPercent)) return "Enter a cash percent above zero.";
+      return "";
+    }
+
+    function scheduleRefetch() {
+      writeSubtitle(currentSettings());
+      clearTimeout(refetchTimer);
+      refetchTimer = setTimeout(loadPrices, 400);
+    }
+
+    async function loadPrices() {
+      const settings = currentSettings();
+      const problem = settingsError(settings);
+      if (problem) {
+        showError(problem);
+        return;
+      }
+      const key = `${settings.ticker}|${settings.lockDate}`;
+      if (prices && prices.ticker === settings.ticker && Date.now() - fetchedAt < REFRESH_MS && fetchedKey === key) {
+        render();
+        return;
+      }
+      const params = new URLSearchParams({ ticker: settings.ticker, lockDate: settings.lockDate });
+      try {
+        const response = await fetch("/api/prices?" + params);
+        const body = await response.json();
+        if (!response.ok) throw new Error(body.error || "Price lookup failed.");
+        if (!body.points || !body.points.length || !body.latest || body.latest.price == null) {
+          throw new Error("No prices on or after the start date.");
+        }
+        prices = body;
+        fetchedAt = Date.now();
+        fetchedKey = key;
+        hideError();
+        render();
+      } catch (error) {
+        showError(error.message || "Price lookup failed.");
+      }
+    }
+
+    function render() {
+      const settings = currentSettings();
+      writeSubtitle(settings);
+      const price = latestPrice();
+      if (!prices || price == null || settingsError(settings)) return;
+
+      const sinceLock = (price / settings.lockPrice - 1) * 100;
+      const stockNow = stockIndex(price, settings);
+      const versusCash = (stockNow / settings.cashPercent - 1) * 100;
+
+      document.querySelector("#asof").textContent = prices.latest.time
+        ? `As of ${formatStamp(prices.latest.time)}`
+        : "";
+
+      setPercent(document.querySelector("#since-lock"), sinceLock);
+      setPercent(document.querySelector("#versus-cash"), versusCash);
+      document.querySelector("#price-detail").textContent =
+        `${money.format(price)} now, ${money.format(settings.lockPrice)} start`;
+      document.querySelector("#cash-detail").textContent =
+        `Cash alternative stays at ${formatPlain(settings.cashPercent)}%`;
+      document.querySelector("#caption").textContent =
+        `100 is the starting amount. A ${formatPlain(settings.upliftPercent)}% uplift begins at ${formatPlain(100 + settings.upliftPercent)}. Cash stays at ${formatPlain(settings.cashPercent)}%.`;
+
+      drawChart(
+        prices.points.map((point) => formatDay(point.date)),
+        prices.points.map((point) => stockIndex(point.close, settings)),
+        settings.cashPercent,
+      );
+      renderBonus(settings, price);
+    }
+
+    function renderBonus(settings, price) {
+      const results = document.querySelector("#bonus-results");
+      const error = document.querySelector("#bonus-error");
+      const typed = bonusInput.value.trim();
+      if (!typed) {
+        results.hidden = true;
+        error.hidden = true;
+        return;
+      }
+      const bonus = parseMoney(typed);
+      if (!Number.isFinite(bonus) || bonus < 0 || price == null || settingsError(settings)) {
+        results.hidden = true;
+        error.hidden = false;
+        return;
+      }
+      const invested = bonus * (1 + settings.upliftPercent / 100);
+      const shareCount = invested / settings.lockPrice;
+      const worth = shareCount * price;
+      const cashDollars = bonus * (settings.cashPercent / 100);
+      document.querySelector("#invested").textContent = money.format(invested);
+      document.querySelector("#shares").textContent = sharesFormat.format(shareCount);
+      document.querySelector("#worth").textContent = money.format(worth);
+      document.querySelector("#cash-dollars").textContent = money.format(cashDollars);
+      results.hidden = false;
+      error.hidden = true;
+    }
+
+    function drawChart(labels, stock, cash) {
+      const low = Math.min(...stock, cash);
+      const high = Math.max(...stock, cash);
+      const pad = Math.max((high - low) * 0.25, 1);
+      const data = {
+        labels,
+        datasets: [
+          {
+            label: "Invested value",
+            data: stock,
+            borderColor: "#60a5fa",
+            backgroundColor: "#60a5fa",
+            tension: 0.15,
+            pointRadius: 4,
+            pointHoverRadius: 7,
+            borderWidth: 2,
+          },
+          {
+            label: "Cash",
+            data: labels.map(() => cash),
+            borderColor: "#2dd4bf",
+            backgroundColor: "#2dd4bf",
+            borderDash: [6, 4],
+            pointRadius: 0,
+            borderWidth: 2,
+          },
+        ],
+      };
+      const options = {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: {
+            position: "bottom",
+            labels: { color: "#e8eef7", boxHeight: 2 },
+          },
+          tooltip: {
+            callbacks: {
+              label(item) {
+                return `${item.dataset.label}: ${item.parsed.y.toFixed(2)}`;
+              },
+            },
+          },
+        },
+        scales: {
+          x: {
+            ticks: { color: "#94a3b8" },
+            grid: { color: "#2a3850" },
+          },
+          y: {
+            min: low - pad,
+            max: high + pad,
+            ticks: { color: "#94a3b8" },
+            grid: { color: "#2a3850" },
+            title: {
+              display: true,
+              text: "Index (start = 100)",
+              color: "#94a3b8",
+            },
+          },
+        },
+      };
+      if (chart) {
+        chart.data = data;
+        chart.options = options;
+        chart.update();
+        return;
+      }
+      chart = new Chart(document.querySelector("#chart"), { type: "line", data, options });
+    }
+
+    function stockIndex(price, settings) {
+      return (100 + settings.upliftPercent) * (price / settings.lockPrice);
+    }
+
+    function latestPrice() {
+      return prices && prices.latest ? prices.latest.price : null;
+    }
+
+    function setPercent(node, value) {
+      node.textContent = `${percent.format(value)}%`;
+      node.classList.remove("positive", "negative");
+      if (value > 0) node.classList.add("positive");
+      if (value < 0) node.classList.add("negative");
+    }
+
+    function parseMoney(text) {
+      return Number(text.replace(/[$,\s]/g, ""));
+    }
+
+    function formatPlain(value) {
+      return new Intl.NumberFormat("en-US", { maximumFractionDigits: 2 }).format(value);
+    }
+
+    function formatDay(iso, withYear) {
+      const [year, month, day] = iso.split("-").map(Number);
+      return new Intl.DateTimeFormat("en-US", {
+        month: "short",
+        day: "numeric",
+        year: withYear ? "numeric" : undefined,
+      }).format(new Date(year, month - 1, day));
+    }
+
+    function formatStamp(unix) {
+      return new Intl.DateTimeFormat("en-US", {
+        month: "short",
+        day: "numeric",
+        hour: "numeric",
+        minute: "2-digit",
+        timeZoneName: "short",
+      }).format(new Date(unix * 1000));
+    }
+
+    function showError(message) {
+      const node = document.querySelector("#error");
+      node.hidden = false;
+      node.textContent = message;
+    }
+
+    function hideError() {
+      const node = document.querySelector("#error");
+      node.hidden = true;
+      node.textContent = "";
+    }
+
+    function isPositive(value) {
+      return Number.isFinite(Number(value)) && Number(value) > 0;
+    }
+
+    function isZeroOrMore(value) {
+      return Number.isFinite(Number(value)) && Number(value) >= 0;
+    }
+
+    function isDate(value) {
+      return typeof value === "string" && /^\d{4}-\d{2}-\d{2}$/.test(value);
+    }
+
+    start();
+  </script>
+</body>
+</html>
